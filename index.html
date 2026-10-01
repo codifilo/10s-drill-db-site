@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tennis Drill DB</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="app-title"></h1>
+    <input id="search" type="search" autocomplete="off">
+    <div class="topbar-actions">
+      <button id="lang-toggle" type="button"></button>
+      <button id="favorites-toggle" type="button" aria-pressed="false"></button>
+      <button id="session-open" type="button"></button>
+    </div>
+  </header>
+  <div class="layout">
+    <aside id="filters" class="filters"></aside>
+    <main>
+      <p id="result-count" class="result-count" aria-live="polite"></p>
+      <ul id="results" class="results"></ul>
+      <p id="error" class="error" hidden></p>
+    </main>
+  </div>
+  <dialog id="detail" class="dialog"></dialog>
+  <dialog id="session" class="dialog"></dialog>
+  <section id="print-area" aria-hidden="true"></section>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
