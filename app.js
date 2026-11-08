@@ -2,12 +2,19 @@ import {
   FACETS, applyFilters, emptyFilters, facetOptions, emptySession, addToSession,
   removeFromSession, moveInSession, setMinutes, sessionTotal, sessionToJSON,
   readSession, writeSession, toggleFavorite, filterFavorites, readFavorites, writeFavorites,
+  readFilterState, writeFilterState, pruneFilters,
 } from "./lib.js";
 import { FACET_LABELS, UI, valueLabel } from "./labels.js";
 
 const SESSION_KEY = "tennis-drill-session-v1";
 const LANG_KEY = "tennis-drill-lang-v1";
 const FAVORITES_KEY = "tennis-drill-favorites-v1";
+const FILTERS_KEY = "tennis-drill-filters-v1";
+// Initial filters for a first visit (nothing saved yet); "Clear filters" still empties everything.
+const DEFAULT_FILTER_STATE = {
+  filters: { ...emptyFilters(), format: ["singles"], players: ["1v1"] },
+  onlyFavorites: false,
+};
 
 const state = {
   data: null,
@@ -79,6 +86,10 @@ function isFavorite(drillId) {
   return state.favorites.includes(drillId);
 }
 
+function persistFilters() {
+  writeFilterState(getStorage(), FILTERS_KEY, { filters: state.filters, onlyFavorites: state.onlyFavorites });
+}
+
 function persistFavorites() {
   writeFavorites(getStorage(), FAVORITES_KEY, state.favorites);
 }
@@ -141,7 +152,7 @@ function renderFilters() {
     const group = el("details", { "data-facet": facet.key }, el("summary", {}, FACET_LABELS[facet.key][state.lang]));
     group.open = prevGroups.has(facet.key)
       ? prevGroups.get(facet.key)
-      : selected.length > 0 || ["format", "skills", "serve_required"].includes(facet.key);
+      : selected.length > 0 || ["format", "skills", "serve_required", "has_winner"].includes(facet.key);
     for (const { value, count } of options) {
       const checkbox = el("input", { type: "checkbox", value });
       checkbox.checked = selected.includes(value);
@@ -150,6 +161,7 @@ function renderFilters() {
         state.filters[facet.key] = checkbox.checked
           ? [...current, value]
           : current.filter((v) => v !== value);
+        persistFilters();
         renderList();
       });
       group.append(
@@ -164,6 +176,7 @@ function renderFilters() {
 function clearFilters() {
   state.filters = emptyFilters();
   state.onlyFavorites = false;
+  persistFilters();
   renderFavoritesButton();
   renderFilters();
   renderList();
@@ -178,6 +191,7 @@ function chipsFor(drill) {
     valueLabel("level", drill.level, state.lang),
   ];
   if (drill.serve_required) chips.push(valueLabel("skills", "serve", state.lang));
+  if (drill.has_winner) chips.push(t().scored);
   chips.push(drill.duration_min ? `${drill.duration_min} ${t().minutes}` : t().noTime);
   return chips;
 }
@@ -458,6 +472,7 @@ function bindStatic() {
   });
   $("#favorites-toggle").addEventListener("click", () => {
     state.onlyFavorites = !state.onlyFavorites;
+    persistFilters();
     renderFavoritesButton();
     renderList();
   });
@@ -491,6 +506,9 @@ async function init() {
   state.lang = readLang();
   state.session = readSession(getStorage(), SESSION_KEY);
   state.favorites = readFavorites(getStorage(), FAVORITES_KEY);
+  const saved = readFilterState(getStorage(), FILTERS_KEY, DEFAULT_FILTER_STATE);
+  state.filters = saved.filters;
+  state.onlyFavorites = saved.onlyFavorites;
   bindStatic();
   renderChrome();
   try {
@@ -504,6 +522,7 @@ async function init() {
   const known = new Set(state.data.drills.map((d) => d.id));
   state.session = { ...state.session, items: state.session.items.filter((i) => known.has(i.drillId)) };
   state.favorites = state.favorites.filter((id) => known.has(id));
+  state.filters = pruneFilters(state.filters, state.data.drills);
   renderAll();
   openFromHash();
 }

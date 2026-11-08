@@ -4,6 +4,7 @@ export const FACETS = [
   { key: "players", type: "scalar" },
   { key: "serve_required", type: "bool" },
   { key: "needs_coach", type: "bool" },
+  { key: "has_winner", type: "bool" },
   { key: "level", type: "scalar" },
   { key: "phase", type: "scalar" },
   { key: "skills", type: "list" },
@@ -64,7 +65,9 @@ export function applyFilters(drills, filters, query, lang) {
 export function facetOptions(drills, facet) {
   const counts = new Map();
   for (const d of drills) {
-    const values = facet.type === "list" ? d[facet.key] : [String(d[facet.key])];
+    const raw = d[facet.key];
+    if (raw === undefined || raw === null) continue;
+    const values = facet.type === "list" ? raw : [String(raw)];
     for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
   }
   return [...counts]
@@ -187,4 +190,49 @@ export function writeFavorites(storage, key, ids) {
   } catch {
     return false;
   }
+}
+
+function sanitizeFilters(raw) {
+  const filters = emptyFilters();
+  if (!raw || typeof raw !== "object") return filters;
+  for (const facet of FACETS) {
+    const values = raw[facet.key];
+    if (Array.isArray(values)) filters[facet.key] = [...new Set(values.filter((v) => typeof v === "string"))];
+  }
+  return filters;
+}
+
+export function readFilterState(storage, key, defaults = { filters: emptyFilters(), onlyFavorites: false }) {
+  const fallback = { filters: sanitizeFilters(defaults.filters), onlyFavorites: defaults.onlyFavorites === true };
+  if (!storage) return fallback;
+  try {
+    const raw = storage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return {
+      filters: sanitizeFilters(parsed?.filters),
+      onlyFavorites: parsed?.onlyFavorites === true,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeFilterState(storage, key, state) {
+  if (!storage) return false;
+  try {
+    storage.setItem(key, JSON.stringify({ filters: state.filters, onlyFavorites: state.onlyFavorites }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function pruneFilters(filters, drills) {
+  const pruned = emptyFilters();
+  for (const facet of FACETS) {
+    const available = new Set(facetOptions(drills, facet).map((o) => o.value));
+    pruned[facet.key] = (filters[facet.key] ?? []).filter((v) => available.has(v));
+  }
+  return pruned;
 }

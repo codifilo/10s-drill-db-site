@@ -9,6 +9,7 @@ export const UI = {
     details: "Details",
     addSession: "Add to session",
     inSession: "In session",
+    scored: "Scored",
     favorites: "Favorites",
     favorite: "Favorite",
     noFavorites: "No favorites yet. Tap the star on a drill to save it here.",
@@ -48,6 +49,7 @@ export const UI = {
     details: "Detalle",
     addSession: "Añadir a la sesión",
     inSession: "En la sesión",
+    scored: "Con tanteo",
     favorites: "Favoritos",
     favorite: "Favorito",
     noFavorites: "Aún no tienes favoritos. Pulsa la estrella de un ejercicio para guardarlo aquí.",
@@ -85,6 +87,7 @@ export const FACET_LABELS = {
   players: { en: "Players", es: "Jugadores" },
   serve_required: { en: "Serve required", es: "Con saque" },
   needs_coach: { en: "Coach needed", es: "Requiere entrenador" },
+  has_winner: { en: "Scored (winner and loser)", es: "Con tanteo y ganador" },
   level: { en: "Level", es: "Nivel" },
   phase: { en: "Phase", es: "Fase" },
   skills: { en: "Skills", es: "Habilidades" },
@@ -191,7 +194,7 @@ function humanize(value) {
 
 export function valueLabel(facetKey, value, lang, sources) {
   if (facetKey === "source_id") return sources?.[value]?.title ?? value;
-  if (facetKey === "serve_required" || facetKey === "needs_coach") {
+  if (facetKey === "serve_required" || facetKey === "needs_coach" || facetKey === "has_winner") {
     if (value === "true") return lang === "es" ? "Sí" : "Yes";
     return "No";
   }
